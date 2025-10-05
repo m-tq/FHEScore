@@ -1,0 +1,278 @@
+# Zama FHEVM Core Developer Documentation
+
+> A condensed guide for Zama's FHEVM, focusing on core concepts for building confidential smart contracts with Solidity and integrating them with a frontend using the Relayer SDK.
+
+## 1. FHEVM Solidity Library Essentials
+
+### Encrypted Data Types
+FHEVM provides encrypted equivalents of standard Solidity types. These are handled as `bytes32` pointers to off-chain encrypted values.
+
+-   Booleans: `ebool`
+-   Unsigned integers: `euint8`, `euint16`, `euint32`, `euint64`
+-   (Coming soon: `eint*`, `eaddress`, etc.)
+
+### Core FHE Operations
+All operations are performed via the `FHE` library.
+
+**Arithmetic:**
+```solidity
+euint32 a = FHE.asEuint32(10);
+euint32 b = FHE.asEuint32(20);
+
+euint32 sum = FHE.add(a, b);
+euint32 diff = FHE.sub(a, b);
+euint32 product = FHE.mul(a, b);
+```
+
+**Comparison (return `ebool`):**
+```solidity
+ebool isGreater = FHE.gt(a, b);
+ebool isEqual = FHE.eq(a, b);
+```
+
+**Conditional Logic (Confidential Branching):**
+The `FHE.select` function is used to avoid revealing information through branching.
+```solidity
+// result = condition ? valueIfTrue : valueIfFalse;
+euint32 max = FHE.select(FHE.gt(a, b), a, b);
+```
+
+### Handling Inputs and Permissions
+
+**Accepting Encrypted Inputs:**
+Use `FHE.fromExternal` to securely accept an encrypted value from a user, verifying its associated proof.
+```solidity
+function myAction(externalEuint32 input, bytes calldata proof) external {
+    euint32 encryptedValue = FHE.fromExternal(input, proof);
+    // ...
+}
+```
+
+**Access Control:**
+You must explicitly grant permissions for addresses (including the contract itself) to read or use an encrypted value.
+```solidity
+// Grant the contract itself permission to use the value in future transactions.
+FHE.allowThis(encryptedValue);
+
+// Grant the transaction sender permission to decrypt the value.
+FHE.allow(encryptedValue, msg.sender);
+```
+
+### Public Decryption
+For values that need to be revealed publicly on-chain (e.g., auction winner, final vote count). This is an asynchronous process.
+
+1.  **Request Decryption:**
+    ```solidity
+    function revealResult() external {
+        bytes32[] memory ciphertexts = new bytes32[](1);
+        ciphertexts[0] = FHE.toBytes32(myEncryptedResult);
+
+        // Request decryption and specify the callback function
+        FHE.requestDecryption(ciphertexts, this.decryptionCallback.selector);
+    }
+    ```
+
+2.  **Implement Callback:** An off-chain oracle will call this function with the decrypted result.
+    ```solidity
+    function decryptionCallback(uint256 requestID, bytes memory cleartexts, bytes memory decryptionProof) external {
+        // CRITICAL: Always verify the signature from the Key Management Service.
+        FHE.checkSignatures(requestID, cleartexts, decryptionProof);
+
+        uint32 result = abi.decode(cleartexts, (uint32));
+        decryptedResult = result;
+    }
+    ```
+
+---
+
+## 2. Relayer SDK Essentials (Frontend)
+
+### Installation and Setup
+```bash
+npm install @zama-fhe/relayer-sdk
+```
+```typescript
+import { createInstance, SepoliaConfig } from '@zama-fhe/relayer-sdk';
+
+// Initialize the FHEVM instance
+const instance = await createInstance(SepoliaConfig);
+```
+
+### Encrypting User Inputs
+To call a contract function with encrypted parameters, you must first encrypt the user's input.
+
+```typescript
+// The user's wallet address is needed for the encryption context
+const signerAddress = await signer.getAddress();
+
+// Create an input buffer for a specific contract
+const input = instance.createEncryptedInput(contractAddress, signerAddress);
+
+// Add values to be encrypted
+input.add32(42); // For an euint32 parameter
+input.addBool(true); // For an ebool parameter
+
+// Encrypt the values and get handles + proof
+const encryptedInputs = await input.encrypt();
+
+// Call the contract
+await contract.myAction(
+    encryptedInputs.handles[0], // The handle for the euint32
+    encryptedInputs.handles[1], // The handle for the ebool
+    encryptedInputs.inputProof  // The proof for all values
+);
+```
+
+### Decrypting Values for the User
+To decrypt a value that a user has permission to view (e.g., their own confidential balance).
+
+```typescript
+const decryptValue = async (
+    ciphertextHandle: string,
+    contractAddress: string,
+    signer: Signer // An ethers.js signer
+) => {
+    // 1. Generate a temporary keypair for this decryption
+    const keypair = instance.generateKeypair();
+
+    // 2. Create and sign an EIP-712 message to authorize the decryption
+    const eip712 = instance.createEIP712(...); // Simplified for brevity
+    const signature = await signer.signTypedData(...);
+
+    // 3. Perform the decryption with the relayer
+    const result = await instance.userDecrypt(
+        [{ handle: ciphertextHandle, contractAddress }],
+        keypair.privateKey,
+        keypair.publicKey,
+        signature.replace('0x', ''),
+        ... // Other EIP-712 parameters
+    );
+
+    // The decrypted value is in the result object
+    return result[ciphertextHandle];
+};
+```
+
+---
+
+## 3. Code Examples
+
+### Example 1: Confidential Voting Contract
+
+A simple contract that converts a public voting system to a confidential one.
+
+**Before (Public):**
+```solidity
+contract SimpleVoting {
+    uint256 public yesVotes;
+    uint256 public noVotes;
+
+    function vote(bool choice) external {
+        if (choice) {
+            yesVotes++;
+        } else {
+            noVotes++;
+        }
+    }
+}
+```
+
+**After (Confidential with FHEVM):**
+```solidity
+import { FHE, euint32, ebool, externalEbool } from "@fhevm/solidity/lib/FHE.sol";
+import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
+
+contract ConfidentialVoting is SepoliaConfig {
+    euint32 private yesVotes;
+    euint32 private noVotes;
+
+    constructor() {
+        yesVotes = FHE.asEuint32(0);
+        noVotes = FHE.asEuint32(0);
+        FHE.allowThis(yesVotes);
+        FHE.allowThis(noVotes);
+    }
+
+    function vote(externalEbool choice, bytes calldata inputProof) external {
+        ebool encryptedChoice = FHE.fromExternal(choice, inputProof);
+        euint32 one = FHE.asEuint32(1);
+
+        // Use FHE.select to conditionally add 1 to the correct counter
+        yesVotes = FHE.select(encryptedChoice, FHE.add(yesVotes, one), yesVotes);
+        noVotes = FHE.select(encryptedChoice, noVotes, FHE.add(noVotes, one));
+
+        // Re-apply permissions after modification
+        FHE.allowThis(yesVotes);
+        FHE.allowThis(noVotes);
+    }
+
+    // Functions to get encrypted vote counts
+    function getYesVotes() external view returns (euint32) { return yesVotes; }
+    function getNoVotes() external view returns (euint32) { return noVotes; }
+}
+```
+
+### Example 2: React Component for a Confidential Counter
+
+This component demonstrates the full frontend flow: connecting to the wallet, encrypting an input, calling the contract, and decrypting the result.
+
+```typescript
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { useFHEVM } from './useFHEVM'; // A custom hook wrapping the Relayer SDK
+
+const ConfidentialCounter = ({ contractAddress, abi }) => {
+    const [count, setCount] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const { fhevmInstance, encryptValue, decryptValue } = useFHEVM();
+
+    const [signer, setSigner] = useState(null);
+    const [contract, setContract] = useState(null);
+
+    useEffect(() => {
+        const init = async () => {
+            if (window.ethereum && fhevmInstance) {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+                const contract = new ethers.Contract(contractAddress, abi, signer);
+                setSigner(signer);
+                setContract(contract);
+            }
+        };
+        init();
+    }, [fhevmInstance, contractAddress, abi]);
+
+    const incrementCounter = async (value) => {
+        if (!contract || !signer) return;
+        setLoading(true);
+        try {
+            const userAddress = await signer.getAddress();
+            const encrypted = await encryptValue(value, 'uint32', contractAddress, userAddress);
+            const tx = await contract.increment(encrypted.handles[0], encrypted.inputProof);
+            await tx.wait();
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    };
+
+    const getCount = async () => {
+        if (!contract || !signer) return;
+        setLoading(true);
+        try {
+            const encryptedCount = await contract.getCount();
+            const decryptedCount = await decryptValue(encryptedCount, contractAddress, signer);
+            setCount(decryptedCount);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    };
+
+    return (
+        <div>
+            <h2>Confidential Counter</h2>
+            {count !== null && <p>Current Count: {count.toString()}</p>}
+            <button onClick={() => incrementCounter(1)} disabled={loading}>Increment</button>
+            <button onClick={getCount} disabled={loading}>Get Count</button>
+            {loading && <p>Loading...</p>}
+        </div>
+    );
+};
+```
