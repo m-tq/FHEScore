@@ -1,124 +1,69 @@
 import React from 'react';
+import { Button } from './ui/button';
+import { Network, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useFHEVM } from '../hooks/useFHEVM';
 
-const NetworkSwitcher = () => {
+const NetworkSwitcher = ({ chainId, isCorrectNetwork, switchToSepolia, getNetworkName }) => {
   const { currentNetwork, error } = useFHEVM();
-
-  // Styles
-  const styles = {
-    networkSwitcher: {
-      padding: '20px',
-      borderRadius: '8px',
-      margin: '20px 0'
-    },
-    networkSwitcherError: {
-      padding: '20px',
-      borderRadius: '8px',
-      margin: '20px 0',
-      background: '#fff3e0',
-      border: '1px solid #ff9800'
-    },
-    currentNetwork: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      padding: '10px 15px',
-      background: '#e8f5e8',
-      border: '1px solid #4caf50',
-      borderRadius: '6px'
-    },
-    networkIndicator: {
-      fontSize: '18px'
-    },
-    networkName: {
-      fontWeight: 'bold',
-      color: '#2e7d32'
-    },
-    networkStatus: {
-      color: '#4caf50',
-      fontSize: '14px'
-    },
-    networkError: {
-      color: '#bf360c'
-    },
-    networkErrorTitle: {
-      color: '#e65100',
-      margin: '0 0 15px 0'
-    },
-    networkErrorText: {
-      color: '#bf360c',
-      marginBottom: '20px'
-    },
-    networkOptions: {
-      display: 'grid',
-      gap: '15px',
-      marginBottom: '25px'
-    },
-    networkButton: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '15px',
-      border: '2px solid #ff9800',
-      borderRadius: '8px',
-      background: 'white',
-      cursor: 'pointer',
-      transition: 'all 0.2s'
-    },
-    networkButtonDisabled: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '15px',
-      border: '2px solid #ff9800',
-      borderRadius: '8px',
-      background: 'white',
-      cursor: 'not-allowed',
-      transition: 'all 0.2s',
-      opacity: 0.6
-    },
-    networkInfoStrong: {
-      display: 'block',
-      color: '#e65100'
-    },
-    networkInfoSmall: {
-      color: '#bf360c'
-    },
-    networkHelp: {
-      background: '#f5f5f5',
-      padding: '15px',
-      borderRadius: '6px',
-      marginTop: '20px'
-    },
-    networkHelpTitle: {
-      margin: '0 0 10px 0',
-      color: '#424242'
-    },
-    networkHelpList: {
-      margin: '10px 0',
-      paddingLeft: '20px'
-    },
-    networkHelpListItem: {
-      margin: '5px 0',
-      color: '#616161'
-    },
-    networkHelpText: {
-      margin: '15px 0 0 0',
-      fontStyle: 'italic',
-      color: '#757575'
+  
+  // If props are provided, use them (new implementation)
+  if (chainId !== undefined && isCorrectNetwork !== undefined) {
+    const networkName = chainId ? getNetworkName(chainId) : 'Unknown';
+    
+    if (isCorrectNetwork) {
+      return (
+        <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <span className="text-sm font-medium text-green-800 dark:text-green-200">
+              {networkName}
+            </span>
+          </div>
+          <span className="text-xs font-mono text-green-700 dark:text-green-300">
+            ID: {chainId}
+          </span>
+        </div>
+      );
     }
-  };
 
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              Wrong Network: {networkName}
+            </span>
+          </div>
+          <Button 
+            onClick={switchToSepolia}
+            variant="outline"
+            size="sm"
+            className="text-xs px-2 py-1 h-6 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:text-yellow-300 dark:border-yellow-700 dark:hover:bg-yellow-900/30"
+          >
+            Switch
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-
+  // Fallback to original implementation if no props provided
   if (!error && currentNetwork) {
     return (
-      <div style={styles.networkSwitcher}>
-        <div style={styles.currentNetwork}>
-          <span style={styles.networkIndicator}>🌐</span>
-          <span style={styles.networkName}>{currentNetwork.name}</span>
-          <span style={styles.networkStatus}>✅ FHEVM Ready</span>
+      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <div className="flex items-center space-x-3">
+          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          <div>
+            <p className="font-medium text-green-800 dark:text-green-200">
+              {currentNetwork.name}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400">
+              ✅ FHEVM Ready
+            </p>
+          </div>
         </div>
+        <Network className="w-5 h-5 text-green-600 dark:text-green-400" />
       </div>
     );
   }

@@ -8,6 +8,7 @@ export const useWallet = () => {
   const [chainId, setChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Check if wallet is already connected
   useEffect(() => {
@@ -38,20 +39,34 @@ export const useWallet = () => {
   // Listen for account changes
   useEffect(() => {
     if (window.ethereum) {
-      const handleAccountsChanged = (accounts) => {
+      const handleAccountsChanged = async (accounts) => {
         if (accounts.length === 0) {
           // User disconnected
           setProvider(null);
           setSigner(null);
           setAccount(null);
           setChainId(null);
+          setError(null);
         } else {
-          // Account changed
-          setAccount(accounts[0]);
-          // Reinitialize provider and signer
-          const newProvider = new ethers.BrowserProvider(window.ethereum);
-          setProvider(newProvider);
-          newProvider.getSigner().then(setSigner);
+          // Account changed - reinitialize everything
+          try {
+            const newProvider = new ethers.BrowserProvider(window.ethereum);
+            const newSigner = await newProvider.getSigner();
+            const network = await newProvider.getNetwork();
+            
+            setProvider(newProvider);
+            setSigner(newSigner);
+            setAccount(accounts[0]);
+            setChainId(Number(network.chainId));
+            setError(null);
+            
+            // Trigger refresh to ensure all components update
+            setRefreshTrigger(prev => prev + 1);
+            console.log('🔄 Account changed, all states refreshed');
+          } catch (err) {
+            console.error('Failed to reinitialize after account change:', err);
+            setError('Failed to reinitialize wallet connection');
+          }
         }
       };
 
@@ -96,6 +111,15 @@ export const useWallet = () => {
       setChainId(Number(network.chainId));
 
       console.log('✅ Wallet connected:', address);
+      
+      // Trigger refresh to ensure all components update
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Force a small delay to ensure all state updates are processed
+      setTimeout(() => {
+        console.log('🔄 Wallet connection completed, all states updated');
+      }, 100);
+      
     } catch (err) {
       console.error('❌ Failed to connect wallet:', err);
       setError(err.message);
@@ -180,6 +204,7 @@ export const useWallet = () => {
     isConnecting,
     isCorrectNetwork,
     error,
+    refreshTrigger,
     connectWallet,
     disconnectWallet,
     switchToSepolia,

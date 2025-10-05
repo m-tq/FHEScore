@@ -6,8 +6,8 @@ const FHEVM_NETWORKS = {
   sepolia: {
     chainId: 11155111,
     name: 'Sepolia Testnet',
-    publicKeyUrl: 'https://gateway.sepolia.zama.ai/fhe-keys',
-    relayerUrl: 'https://gateway.sepolia.zama.ai/relayer',
+    publicKeyUrl: 'hhttps://relayer.testnet.zama.cloud/fhe-keys',
+    relayerUrl: 'https://relayer.testnet.zama.cloud',
     aclContractAddress: '0x687820221192C5B662b25367F70076A37bc79b6c',
     kmsContractAddress: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
     inputVerifierContractAddress: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',

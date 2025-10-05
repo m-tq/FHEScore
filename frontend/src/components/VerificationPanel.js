@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { verifyUserScore, hasUserCalculatedScore } from '../utils/contract';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Search, Loader2, CheckCircle, XCircle, RefreshCw, Info, Target, Shield, Lightbulb, AlertCircle } from 'lucide-react';
 
 const VerificationPanel = ({ contract, userAddress }) => {
   const [verificationResult, setVerificationResult] = useState(null);
@@ -62,136 +65,173 @@ const VerificationPanel = ({ contract, userAddress }) => {
 
   if (hasScore === false) {
     return (
-      <div className="card text-center">
-        <h3>🔍 Score Verification</h3>
-        <p>You need to calculate your score first before verification.</p>
-        <p style={{ color: '#666', fontSize: '14px' }}>
-          Go to the User Dashboard to calculate your score based on submitted activities.
-        </p>
-      </div>
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <Search className="h-5 w-5" />
+            Score Verification
+          </CardTitle>
+          <CardDescription>
+            You need to calculate your score first before verification.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Go to the User Dashboard to calculate your score based on submitted activities.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="card">
-      <h3>🔍 Score Verification</h3>
-      <p>
-        Verify if your credit score meets the minimum threshold without revealing your exact score.
-        This provides privacy-preserving proof of creditworthiness.
-      </p>
-
-      {/* Verification Controls */}
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        {verificationResult === null ? (
-          <button 
-            className="btn btn-primary"
-            onClick={handleVerification}
-            disabled={isVerifying || hasScore === false}
-          >
-            {isVerifying ? (
-              <>
-                <span className="loading" style={{ marginRight: '10px' }}></span>
-                Verifying...
-              </>
-            ) : (
-              '🔍 Verify Score Threshold'
-            )}
-          </button>
-        ) : (
-          <button 
-            className="btn btn-secondary"
-            onClick={resetVerification}
-          >
-            🔄 Run New Verification
-          </button>
-        )}
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="alert alert-danger">
-          {error}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Search className="h-5 w-5" />
+          Score Verification
+        </CardTitle>
+        <CardDescription>
+          Verify if your credit score meets the minimum threshold without revealing your exact score.
+          This provides privacy-preserving proof of creditworthiness.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Verification Controls */}
+        <div className="flex justify-center">
+          {verificationResult === null ? (
+            <Button 
+              onClick={handleVerification}
+              disabled={isVerifying || hasScore === false}
+              size="lg"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Verify Score Threshold
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button 
+              variant="outline"
+              onClick={resetVerification}
+              size="lg"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Run New Verification
+            </Button>
+          )}
         </div>
-      )}
 
-      {/* Verification Result */}
-      {verificationResult !== null && (
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <div 
-            className={`alert ${verificationResult ? 'alert-success' : 'alert-warning'}`}
-            style={{ 
-              fontSize: '18px', 
-              fontWeight: 'bold',
-              padding: '20px'
-            }}
-          >
-            {verificationResult ? (
-              <>
-                ✅ <strong>VERIFIED</strong>
-                <div style={{ fontSize: '14px', fontWeight: 'normal', marginTop: '10px' }}>
-                  Your credit score meets or exceeds the minimum threshold of 700 points.
+        {/* Error Display */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/15 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">{error}</span>
+          </div>
+        )}
+
+        {/* Verification Result */}
+        {verificationResult !== null && (
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <div className={`p-6 rounded-lg ${verificationResult 
+                ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300' 
+                : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300'
+              }`}>
+                <div className="flex items-center justify-center gap-2 text-lg font-bold mb-2">
+                  {verificationResult ? (
+                    <>
+                      <CheckCircle className="h-6 w-6" />
+                      VERIFIED
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-6 w-6" />
+                      NOT VERIFIED
+                    </>
+                  )}
                 </div>
-              </>
-            ) : (
-              <>
-                ❌ <strong>NOT VERIFIED</strong>
-                <div style={{ fontSize: '14px', fontWeight: 'normal', marginTop: '10px' }}>
-                  Your credit score is below the minimum threshold of 700 points.
-                </div>
-              </>
-            )}
+                <p className="text-sm font-normal">
+                  {verificationResult 
+                    ? 'Your credit score meets or exceeds the minimum threshold of 700 points.'
+                    : 'Your credit score is below the minimum threshold of 700 points.'
+                  }
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Information Panel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Info className="h-4 w-4" />
+              How Verification Works
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              <strong>Privacy-Preserving:</strong> The verification process uses FHEVM's encrypted computation 
+              to check if your score meets the threshold without revealing your exact score to anyone, 
+              including the contract or third parties.
+            </p>
+            <p>
+              <strong>Current Threshold:</strong> The minimum verification threshold is set to 700 points. 
+              This threshold represents a "good" credit score level.
+            </p>
+            <p>
+              <strong>Use Cases:</strong> Verification can be used for loan applications, credit checks, 
+              or any scenario where you need to prove creditworthiness without revealing sensitive details.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Threshold Information */}
+        <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+          <Target className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <strong>Verification Threshold:</strong> 700 points
+            <div className="mt-1 text-xs">
+              This threshold can be updated by the contract administrator to reflect changing credit standards.
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Information Panel */}
-      <div style={{ marginTop: '20px' }}>
-        <h4>ℹ️ How Verification Works</h4>
-        <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.6' }}>
-          <p>
-            <strong>Privacy-Preserving:</strong> The verification process uses FHEVM's encrypted computation 
-            to check if your score meets the threshold without revealing your exact score to anyone, 
-            including the contract or third parties.
-          </p>
-          <p>
-            <strong>Current Threshold:</strong> The minimum verification threshold is set to 700 points. 
-            This threshold represents a "good" credit score level.
-          </p>
-          <p>
-            <strong>Use Cases:</strong> Verification can be used for loan applications, credit checks, 
-            or any scenario where you need to prove creditworthiness without revealing sensitive details.
-          </p>
+        {/* Privacy Notice */}
+        <div className="flex items-start gap-2 p-3 rounded-md bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300">
+          <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <strong>Zero-Knowledge Proof:</strong> This verification provides cryptographic proof of your 
+            creditworthiness without revealing your actual score, maintaining complete privacy of your financial data.
+          </div>
         </div>
-      </div>
 
-      {/* Threshold Information */}
-      <div className="alert alert-info" style={{ marginTop: '15px' }}>
-        <strong>🎯 Verification Threshold:</strong> 700 points
-        <div style={{ fontSize: '14px', marginTop: '5px' }}>
-          This threshold can be updated by the contract administrator to reflect changing credit standards.
-        </div>
-      </div>
-
-      {/* Privacy Notice */}
-      <div className="alert alert-success" style={{ marginTop: '15px' }}>
-        <strong>🔒 Zero-Knowledge Proof:</strong> This verification provides cryptographic proof of your 
-        creditworthiness without revealing your actual score, maintaining complete privacy of your financial data.
-      </div>
-
-      {/* Improvement Suggestions */}
-      {verificationResult === false && (
-        <div className="alert alert-warning" style={{ marginTop: '15px' }}>
-          <strong>💡 Improve Your Score:</strong>
-          <ul style={{ marginTop: '10px', marginBottom: '0', fontSize: '14px' }}>
-            <li>Submit more loan repayment activities (+100 points each)</li>
-            <li>Increase staking participation (+50 points per day)</li>
-            <li>Participate in governance voting (+30 points per vote)</li>
-            <li>Maintain active trading (+20 points per unit volume)</li>
-            <li>Avoid loan defaults (-200 points each)</li>
-          </ul>
-        </div>
-      )}
-    </div>
+        {/* Improvement Suggestions */}
+        {verificationResult === false && (
+          <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
+            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <strong>Improve Your Score:</strong>
+              <ul className="mt-2 space-y-1 text-xs">
+                <li>• Submit more loan repayment activities (+100 points each)</li>
+                <li>• Increase staking participation (+50 points per day)</li>
+                <li>• Participate in governance voting (+30 points per vote)</li>
+                <li>• Maintain active trading (+20 points per unit volume)</li>
+                <li>• Avoid loan defaults (-200 points each)</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { isUserRegistered, hasUserCalculatedScore, registerUser, calculateScore, getContractConfig } from '../utils/contract';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { User, CheckCircle, XCircle, Calculator, RefreshCw, Settings, Loader2 } from 'lucide-react';
 
 const UserDashboard = ({ contract, userAddress, fhevm }) => {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -75,125 +78,206 @@ const UserDashboard = ({ contract, userAddress, fhevm }) => {
 
   if (isLoading) {
     return (
-      <div className="card text-center">
-        <div className="loading"></div>
-        <p>Loading user dashboard...</p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
+          <p className="text-muted-foreground">Loading user dashboard...</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="card">
-      <h2>👤 User Dashboard</h2>
-      
-      {/* User Info */}
-      <div style={{ marginBottom: '20px' }}>
-        <p><strong>Address:</strong> <code>{userAddress}</code></p>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
-          <span className={`status-indicator ${isRegistered ? 'status-connected' : 'status-disconnected'}`}>
-            {isRegistered ? '✅ Registered' : '❌ Not Registered'}
-          </span>
-          <span className={`status-indicator ${hasScore ? 'status-connected' : 'status-disconnected'}`}>
-            {hasScore ? '✅ Score Calculated' : '❌ No Score'}
-          </span>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="w-5 h-5" />
+            <span>User Dashboard</span>
+          </CardTitle>
+          <CardDescription>
+            Manage your registration and credit score calculation
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* User Info */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Wallet Address</p>
+              <code className="text-sm bg-muted px-2 py-1 rounded font-mono break-all">
+                {userAddress}
+              </code>
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                isRegistered 
+                  ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                  : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+              }`}>
+                {isRegistered ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <XCircle className="w-4 h-4" />
+                )}
+                <span>{isRegistered ? 'Registered' : 'Not Registered'}</span>
+              </div>
+              
+              <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                hasScore 
+                  ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                  : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+              }`}>
+                {hasScore ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <XCircle className="w-4 h-4" />
+                )}
+                <span>{hasScore ? 'Score Calculated' : 'No Score'}</span>
+              </div>
+            </div>
+          </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      )}
+          {/* Error Display */}
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+            </div>
+          )}
 
-      {/* Registration Section */}
-      {!isRegistered && (
-        <div style={{ marginBottom: '20px' }}>
-          <h3>🚀 Get Started</h3>
-          <p>Register to start building your private credit score.</p>
-          <button 
-            className="btn btn-success"
-            onClick={handleRegister}
-            disabled={isRegistering}
-          >
-            {isRegistering ? (
-              <>
-                <span className="loading" style={{ marginRight: '10px' }}></span>
-                Registering...
-              </>
-            ) : (
-              '📝 Register Now'
-            )}
-          </button>
-        </div>
-      )}
+          {/* Registration Section */}
+          {!isRegistered && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🚀 Get Started</CardTitle>
+                <CardDescription>
+                  Register to start building your private credit score.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleRegister}
+                  disabled={isRegistering}
+                  className="w-full sm:w-auto"
+                >
+                  {isRegistering ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-4 h-4 mr-2" />
+                      Register Now
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Score Calculation Section */}
-      {isRegistered && !hasScore && (
-        <div style={{ marginBottom: '20px' }}>
-          <h3>🧮 Calculate Your Score</h3>
-          <p>Calculate your credit score based on submitted activities.</p>
-          <button 
-            className="btn btn-success"
-            onClick={handleCalculateScore}
-            disabled={isCalculating}
-          >
-            {isCalculating ? (
-              <>
-                <span className="loading" style={{ marginRight: '10px' }}></span>
-                Calculating...
-              </>
-            ) : (
-              '🔢 Calculate Score'
-            )}
-          </button>
-        </div>
-      )}
+          {/* Score Calculation Section */}
+          {isRegistered && !hasScore && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🧮 Calculate Your Score</CardTitle>
+                <CardDescription>
+                  Calculate your credit score based on submitted activities.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleCalculateScore}
+                  disabled={isCalculating}
+                  className="w-full sm:w-auto"
+                >
+                  {isCalculating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="w-4 h-4 mr-2" />
+                      Calculate Score
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Score Update Section */}
-      {isRegistered && hasScore && (
-        <div style={{ marginBottom: '20px' }}>
-          <h3>🔄 Update Your Score</h3>
-          <p>Recalculate your score after submitting new activities.</p>
-          <button 
-            className="btn btn-secondary"
-            onClick={handleCalculateScore}
-            disabled={isCalculating}
-          >
-            {isCalculating ? (
-              <>
-                <span className="loading" style={{ marginRight: '10px' }}></span>
-                Recalculating...
-              </>
-            ) : (
-              '🔄 Recalculate Score'
-            )}
-          </button>
-        </div>
-      )}
+          {/* Score Update Section */}
+          {isRegistered && hasScore && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🔄 Update Your Score</CardTitle>
+                <CardDescription>
+                  Recalculate your score after submitting new activities.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  variant="outline"
+                  onClick={handleCalculateScore}
+                  disabled={isCalculating}
+                  className="w-full sm:w-auto"
+                >
+                  {isCalculating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Recalculating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Recalculate Score
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Contract Configuration */}
       {contractConfig && (
-        <div>
-          <h3>⚙️ Scoring Configuration</h3>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-            <div style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', margin: '5px' }}>
-              <strong>Repay Weight:</strong> +{contractConfig.repayWeight}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="w-5 h-5" />
+              <span>Scoring Configuration</span>
+            </CardTitle>
+            <CardDescription>
+              Current weights and penalties used in score calculation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground">Repay Weight</div>
+                <div className="text-lg font-semibold text-green-600">+{contractConfig.repayWeight}</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground">Default Penalty</div>
+                <div className="text-lg font-semibold text-red-600">-{contractConfig.defaultPenalty}</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground">Staking Weight</div>
+                <div className="text-lg font-semibold text-green-600">+{contractConfig.stakingWeight}</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground">Governance Weight</div>
+                <div className="text-lg font-semibold text-green-600">+{contractConfig.governanceWeight}</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground">Trading Weight</div>
+                <div className="text-lg font-semibold text-green-600">+{contractConfig.tradingWeight}</div>
+              </div>
             </div>
-            <div style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', margin: '5px' }}>
-              <strong>Default Penalty:</strong> -{contractConfig.defaultPenalty}
-            </div>
-            <div style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', margin: '5px' }}>
-              <strong>Staking Weight:</strong> +{contractConfig.stakingWeight}
-            </div>
-            <div style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', margin: '5px' }}>
-              <strong>Governance Weight:</strong> +{contractConfig.governanceWeight}
-            </div>
-            <div style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', margin: '5px' }}>
-              <strong>Trading Weight:</strong> +{contractConfig.tradingWeight}
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

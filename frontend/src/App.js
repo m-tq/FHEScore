@@ -1,220 +1,229 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from './hooks/useWallet';
 import { useFHEVM } from './hooks/useFHEVM';
-import WalletConnection from './components/WalletConnection';
+import { ThemeProvider } from './components/theme-provider';
+import { ThemeToggle } from './components/theme-toggle';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import Sidebar from './components/Sidebar';
+import MobileNav from './components/MobileNav';
 import UserDashboard from './components/UserDashboard';
 import ActivitySubmission from './components/ActivitySubmission';
 import ScoreDisplay from './components/ScoreDisplay';
 import VerificationPanel from './components/VerificationPanel';
-import NetworkSwitcher from './components/NetworkSwitcher';
 import { createContractInstance } from './utils/contract';
 import { getContractAddress } from './config/contracts';
 
-function App() {
-  const wallet = useWallet();
+function AppContent() {
+  const {
+    signer,
+    account,
+    chainId,
+    isConnected,
+    isConnecting,
+    isCorrectNetwork,
+    error: walletError,
+    refreshTrigger,
+    connectWallet,
+    disconnectWallet,
+    switchToSepolia,
+    getNetworkName,
+  } = useWallet();
   const fhevm = useFHEVM();
   const [contract, setContract] = useState(null);
-  const [contractAddress, setContractAddress] = useState(null);
-
-  // Get contract address automatically based on current network
-  useEffect(() => {
-    if (wallet.chainId) {
-      const address = getContractAddress(wallet.chainId);
-      setContractAddress(address);
-      console.log(`📋 Contract address for chain ${wallet.chainId}:`, address);
-    }
-  }, [wallet.chainId]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Create contract instance when wallet and FHEVM are ready
   useEffect(() => {
-    if (wallet.signer && contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
-      try {
-        const contractInstance = createContractInstance(contractAddress, wallet.signer);
-        setContract(contractInstance);
-        console.log('✅ Contract instance created:', contractAddress);
-      } catch (error) {
-        console.error('❌ Failed to create contract instance:', error);
+    const initContract = async () => {
+      console.log('🔍 Contract initialization check:', {
+        signer: !!signer,
+        fhevmInstance: !!fhevm.fhevmInstance,
+        chainId,
+        fhevmLoading: fhevm.isLoading,
+        fhevmError: fhevm.error
+      });
+
+      if (signer && fhevm.fhevmInstance && chainId) {
+        try {
+          const contractAddress = getContractAddress(chainId);
+          console.log('📍 Contract address for chain', chainId, ':', contractAddress);
+          
+          if (contractAddress) {
+            const contractInstance = await createContractInstance(
+              contractAddress,
+              signer,
+              fhevm.fhevmInstance
+            );
+            setContract(contractInstance);
+            console.log('✅ Contract initialized:', contractAddress);
+          } else {
+            console.warn('⚠️ No contract address for chain:', chainId);
+            setContract(null);
+          }
+        } catch (error) {
+          console.error('❌ Failed to initialize contract:', error);
+          setContract(null);
+        }
+      } else {
+        console.log('⏳ Waiting for dependencies:', {
+          needsSigner: !signer,
+          needsFHEVM: !fhevm.fhevmInstance,
+          needsChainId: !chainId
+        });
+        setContract(null);
       }
-    } else {
-      setContract(null);
-    }
-  }, [wallet.signer, contractAddress]);
+    };
+
+    initContract();
+  }, [signer, fhevm.fhevmInstance, chainId, refreshTrigger, fhevm.isLoading, fhevm.error]);
 
   return (
-    <div className="App">
-      <div className="container">
-        {/* Header */}
-        <header className="text-center mb-3">
-          <h1 style={{ 
-            color: 'white', 
-            fontSize: '3rem', 
-            fontWeight: 'bold',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-            marginBottom: '10px'
-          }}>
-            🔐 FHEScore
-          </h1>
-          <p style={{ 
-            color: 'rgba(255,255,255,0.9)', 
-            fontSize: '1.2rem',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-          }}>
-            Private Credit Score System using FHEVM
-          </p>
-        </header>
+    <div className="min-h-screen bg-background">
+      {/* Sidebar */}
+      <Sidebar
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        account={account}
+        walletError={walletError}
+        connectWallet={connectWallet}
+        disconnectWallet={disconnectWallet}
+        chainId={chainId}
+        isCorrectNetwork={isCorrectNetwork}
+        switchToSepolia={switchToSepolia}
+        getNetworkName={getNetworkName}
+        contract={contract}
+        fhevm={fhevm}
+        onToggle={setIsSidebarCollapsed}
+      />
 
-        {/* Network Switcher */}
-        <NetworkSwitcher />
+      {/* Mobile Navigation */}
+      <MobileNav
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        account={account}
+        walletError={walletError}
+        connectWallet={connectWallet}
+        disconnectWallet={disconnectWallet}
+        chainId={chainId}
+        isCorrectNetwork={isCorrectNetwork}
+        switchToSepolia={switchToSepolia}
+        getNetworkName={getNetworkName}
+        contract={contract}
+        fhevm={fhevm}
+      />
 
-        {/* Status Indicators */}
-        <div className="card">
-          <h3>System Status</h3>
-          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="status-indicator">
-              <span className={`status-indicator ${wallet.isConnected ? 'status-connected' : 'status-disconnected'}`}>
-                Wallet: {wallet.isConnected ? 'Connected' : 'Disconnected'}
-              </span>
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-80'}`}>
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          {/* Header */}
+          <header className="text-center mb-8 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex-1" />
+              <div className="flex-1 text-center">
+                <h1 className="text-4xl font-bold text-foreground mb-2">
+                  🔐 FHEScore
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Private Credit Score System using FHEVM
+                </p>
+              </div>
+              <div className="flex-1 flex justify-end">
+                <ThemeToggle />
+              </div>
             </div>
-            
-            <div className="status-indicator">
-              <span className={`status-indicator ${fhevm.isReady ? 'status-connected' : 'status-disconnected'}`}>
-                FHEVM: {fhevm.isReady ? 'Ready' : fhevm.isLoading ? 'Loading...' : 'Error'}
-              </span>
-            </div>
-            
-            <div className="status-indicator">
-              <span className={`status-indicator ${fhevm.currentNetwork ? 'status-connected' : 'status-disconnected'}`}>
-                Network: {fhevm.currentNetwork ? fhevm.currentNetwork.name : wallet.chainId ? wallet.getNetworkName(wallet.chainId) : 'Unknown'}
-              </span>
-            </div>
+          </header>
 
-            <div className="status-indicator">
-              <span className={`status-indicator ${contract ? 'status-connected' : 'status-disconnected'}`}>
-                Contract: {contract ? 'Connected' : contractAddress ? 'Address Found' : 'Not Available'}
-              </span>
-            </div>
+        {/* Main Content Grid */}
+        {isConnected && contract && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            {/* User Dashboard */}
+            <Card className="custom-card">
+              <CardHeader>
+                <CardTitle>Dashboard</CardTitle>
+                <CardDescription>Your account overview</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UserDashboard
+                  contract={contract}
+                  userAddress={account}
+                  fhevm={fhevm}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Score Display */}
+            <Card className="custom-card">
+              <CardHeader>
+                <CardTitle>Credit Score</CardTitle>
+                <CardDescription>Your private credit score</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScoreDisplay
+                  contract={contract}
+                  contractAddress={getContractAddress(chainId)}
+                  userAddress={account}
+                  fhevm={fhevm.fhevmInstance}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Activity Submission */}
+            <Card className="custom-card">
+              <CardHeader>
+                <CardTitle>Submit Activity</CardTitle>
+                <CardDescription>Add new financial activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ActivitySubmission
+                  contract={contract}
+                  contractAddress={getContractAddress(chainId)}
+                  userAddress={account}
+                  fhevm={fhevm}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Verification Panel */}
+            <Card className="custom-card">
+              <CardHeader>
+                <CardTitle>Verification</CardTitle>
+                <CardDescription>Verify and manage activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VerificationPanel
+                  contract={contract}
+                  userAddress={account}
+                />
+              </CardContent>
+            </Card>
           </div>
+        )}
 
-          {/* Contract Address Display */}
-          {contractAddress && (
-            <div className="mt-3">
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Contract Address:
-              </label>
-              <div style={{ 
-                padding: '10px', 
-                background: '#f8f9fa', 
-                border: '1px solid #dee2e6', 
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                wordBreak: 'break-all'
-              }}>
-                {contractAddress}
-              </div>
-            </div>
-          )}
-
-          {!contractAddress && wallet.chainId && (
-            <div className="mt-3">
-              <div style={{ 
-                padding: '10px', 
-                background: '#fff3cd', 
-                border: '1px solid #ffeaa7', 
-                borderRadius: '4px',
-                color: '#856404'
-              }}>
-                ⚠️ No contract deployed on this network (Chain ID: {wallet.chainId})
-              </div>
+          {/* Connection Required Message */}
+          {!isConnected && (
+            <div className="text-center py-12 animate-fade-in">
+              <Card className="custom-card max-w-md mx-auto">
+                <CardContent className="pt-6">
+                  <div className="text-6xl mb-4">🔐</div>
+                  <h3 className="text-xl font-semibold mb-2">Connect Your Wallet</h3>
+                  <p className="text-muted-foreground">
+                    Please connect your wallet to start using FHEScore
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
-
-        {/* Error Messages */}
-        {wallet.error && (
-          <div className="alert alert-danger">
-            <strong>Wallet Error:</strong> {wallet.error}
-          </div>
-        )}
-
-        {fhevm.error && (
-          <div className="alert alert-danger">
-            <strong>FHEVM Error:</strong> {fhevm.error}
-          </div>
-        )}
-
-        {/* Wallet Connection */}
-        {!wallet.isConnected && (
-          <WalletConnection 
-            onConnect={wallet.connectWallet}
-            isConnecting={wallet.isConnecting}
-          />
-        )}
-
-        {/* Main Application */}
-        {wallet.isConnected && fhevm.isReady && contract && (
-          <>
-            {/* User Dashboard */}
-            <UserDashboard 
-              contract={contract}
-              userAddress={wallet.account}
-              fhevm={fhevm}
-            />
-
-            {/* Main Content Grid */}
-            <div className="grid">
-              {/* Activity Submission */}
-              <ActivitySubmission 
-                contract={contract}
-                contractAddress={contractAddress}
-                userAddress={wallet.account}
-                fhevm={fhevm}
-              />
-
-              {/* Score Display */}
-              <ScoreDisplay 
-                contract={contract}
-                contractAddress={contractAddress}
-                userAddress={wallet.account}
-                fhevm={fhevm}
-                signer={wallet.signer}
-              />
-            </div>
-
-            {/* Verification Panel */}
-            <VerificationPanel 
-              contract={contract}
-              contractAddress={contractAddress}
-              fhevm={fhevm}
-              signer={wallet.signer}
-            />
-          </>
-        )}
-
-        {/* Loading States */}
-        {fhevm.isLoading && (
-          <div className="card text-center">
-            <div className="loading"></div>
-            <p>Initializing FHEVM...</p>
-          </div>
-        )}
-
-        {/* Footer */}
-        <footer className="text-center mt-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          <p>
-            Built with ❤️ using Zama's FHEVM | 
-            <a 
-              href="https://docs.zama.ai/fhevm" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ color: 'rgba(255,255,255,0.9)', marginLeft: '5px' }}
-            >
-              Learn More
-            </a>
-          </p>
-        </footer>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="fhescore-theme">
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

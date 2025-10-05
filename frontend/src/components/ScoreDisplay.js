@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getUserScore, getUserActivities, hasUserCalculatedScore } from '../utils/contract';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { BarChart3, Unlock, Shield, TrendingUp, Loader2, AlertCircle, Lightbulb } from 'lucide-react';
 
 const ScoreDisplay = ({ contract, contractAddress, userAddress, fhevm }) => {
   const [score, setScore] = useState(null);
@@ -25,7 +28,7 @@ const ScoreDisplay = ({ contract, contractAddress, userAddress, fhevm }) => {
   }, [contract, userAddress]);
 
   const loadScoreAndActivities = async () => {
-    if (!contract || !userAddress || !fhevm.isReady) {
+    if (!contract || !userAddress || !fhevm?.isReady) {
       setError('Contract or FHEVM not ready');
       return;
     }
@@ -96,10 +99,17 @@ const ScoreDisplay = ({ contract, contractAddress, userAddress, fhevm }) => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 800) return '#28a745'; // Green
-    if (score >= 700) return '#ffc107'; // Yellow
-    if (score >= 600) return '#fd7e14'; // Orange
-    return '#dc3545'; // Red
+    if (score >= 800) return 'text-green-600 dark:text-green-400';
+    if (score >= 700) return 'text-yellow-600 dark:text-yellow-400';
+    if (score >= 600) return 'text-orange-600 dark:text-orange-400';
+    return 'text-red-600 dark:text-red-400';
+  };
+
+  const getScoreBgColor = (score) => {
+    if (score >= 800) return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+    if (score >= 700) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+    if (score >= 600) return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800';
+    return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
   };
 
   const getScoreRating = (score) => {
@@ -111,138 +121,206 @@ const ScoreDisplay = ({ contract, contractAddress, userAddress, fhevm }) => {
 
   if (!hasScore) {
     return (
-      <div className="card text-center">
-        <h3>📊 Your Credit Score</h3>
-        <p>You need to calculate your score first.</p>
-        <p style={{ color: '#666', fontSize: '14px' }}>
-          Go to the User Dashboard to calculate your score based on submitted activities.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <BarChart3 className="w-5 h-5" />
+            <span>Your Credit Score</span>
+          </CardTitle>
+          <CardDescription>
+            View your private credit score and activity breakdown
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <div className="flex flex-col items-center space-y-4">
+            <AlertCircle className="w-12 h-12 text-muted-foreground" />
+            <div>
+              <p className="font-medium">No score calculated yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Go to the User Dashboard to calculate your score based on submitted activities.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="card">
-      <h3>📊 Your Credit Score</h3>
-      
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <button 
-          className="btn btn-primary"
-          onClick={loadScoreAndActivities}
-          disabled={isLoading || !fhevm.isReady}
-        >
-          {isLoading ? (
-            <>
-              <span className="loading" style={{ marginRight: '10px' }}></span>
-              Decrypting...
-            </>
-          ) : (
-            '🔓 Decrypt & View Score'
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <BarChart3 className="w-5 h-5" />
+            <span>Your Credit Score</span>
+          </CardTitle>
+          <CardDescription>
+            Decrypt and view your private credit score
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center">
+            <Button 
+              onClick={loadScoreAndActivities}
+              disabled={isLoading || !fhevm?.isReady}
+              size="lg"
+              className="w-full sm:w-auto"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Decrypting...
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-4 h-4 mr-2" />
+                  Decrypt & View Score
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            </div>
           )}
-        </button>
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      )}
-
-      {/* Score Display */}
-      {score !== null && (
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div 
-            style={{
-              fontSize: '48px',
-              fontWeight: 'bold',
-              color: getScoreColor(score),
-              marginBottom: '10px'
-            }}
-          >
-            {score}
-          </div>
-          <div 
-            style={{
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: getScoreColor(score),
-              marginBottom: '5px'
-            }}
-          >
-            {getScoreRating(score)}
-          </div>
-          <div style={{ fontSize: '14px', color: '#666' }}>
-            Credit Score Range: 0 - 1000+
-          </div>
-        </div>
-      )}
+          {/* Score Display */}
+          {score !== null && (
+            <Card className={`border-2 ${getScoreBgColor(score)}`}>
+              <CardContent className="text-center py-8">
+                <div className={`text-6xl font-bold mb-2 ${getScoreColor(score)}`}>
+                  {score}
+                </div>
+                <div className={`text-xl font-semibold mb-2 ${getScoreColor(score)}`}>
+                  {getScoreRating(score)}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Credit Score Range: 0 - 1000+
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Activities Breakdown */}
       {activities && (
-        <div>
-          <h4>📋 Activity Breakdown</h4>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-            <div style={{ padding: '15px', background: '#e8f5e8', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
-                {activities.repayCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>Loan Repayments</div>
-              <div style={{ fontSize: '12px', color: '#28a745' }}>+{activities.repayCount * 100} points</div>
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5" />
+              <span>Activity Breakdown</span>
+            </CardTitle>
+            <CardDescription>
+              Detailed breakdown of your credit-building activities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <CardContent className="text-center py-4">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                    {activities.repayCount}
+                  </div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Loan Repayments</div>
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    +{activities.repayCount * 100} points
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div style={{ padding: '15px', background: '#f8e8e8', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#dc3545' }}>
-                {activities.defaultCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>Loan Defaults</div>
-              <div style={{ fontSize: '12px', color: '#dc3545' }}>-{activities.defaultCount * 200} points</div>
-            </div>
+              <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                <CardContent className="text-center py-4">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-1">
+                    {activities.defaultCount}
+                  </div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Loan Defaults</div>
+                  <div className="text-xs text-red-600 dark:text-red-400">
+                    -{activities.defaultCount * 200} points
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div style={{ padding: '15px', background: '#e8f4f8', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#17a2b8' }}>
-                {activities.stakingDays}
-              </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>Staking Days</div>
-              <div style={{ fontSize: '12px', color: '#17a2b8' }}>+{activities.stakingDays * 50} points</div>
-            </div>
+              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="text-center py-4">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                    {activities.stakingDays}
+                  </div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Staking Days</div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">
+                    +{activities.stakingDays * 50} points
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div style={{ padding: '15px', background: '#f0e8f8', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#6f42c1' }}>
-                {activities.governanceVotes}
-              </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>Governance Votes</div>
-              <div style={{ fontSize: '12px', color: '#6f42c1' }}>+{activities.governanceVotes * 30} points</div>
-            </div>
+              <Card className="bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
+                <CardContent className="text-center py-4">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                    {activities.governanceVotes}
+                  </div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Governance Votes</div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400">
+                    +{activities.governanceVotes * 30} points
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div style={{ padding: '15px', background: '#fff3e0', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#fd7e14' }}>
-                {activities.tradingVolume}
-              </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>Trading Volume</div>
-              <div style={{ fontSize: '12px', color: '#fd7e14' }}>+{activities.tradingVolume * 20} points</div>
+              <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                <CardContent className="text-center py-4">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                    {activities.tradingVolume}
+                  </div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Trading Volume</div>
+                  <div className="text-xs text-orange-600 dark:text-orange-400">
+                    +{activities.tradingVolume * 20} points
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Privacy Notice */}
-      <div className="alert alert-info" style={{ marginTop: '20px' }}>
-        <strong>🔒 Privacy Protected:</strong> Your score and activity data are encrypted on-chain. Only you can decrypt and view this information using your private key.
-      </div>
+      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="py-4">
+          <div className="flex items-start space-x-3">
+            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">Privacy Protected</h4>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Your score and activity data are encrypted on-chain. Only you can decrypt and view this information using your private key.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Score Improvement Tips */}
       {score !== null && score < 700 && (
-        <div className="alert alert-warning" style={{ marginTop: '15px' }}>
-          <strong>💡 Improve Your Score:</strong>
-          <ul style={{ marginTop: '10px', marginBottom: '0' }}>
-            <li>Make more loan repayments (+100 points each)</li>
-            <li>Participate in staking (+50 points per day)</li>
-            <li>Vote in governance proposals (+30 points each)</li>
-            <li>Increase trading activity (+20 points per unit)</li>
-            <li>Avoid loan defaults (-200 points each)</li>
-          </ul>
-        </div>
+        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="py-4">
+            <div className="flex items-start space-x-3">
+              <Lightbulb className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Improve Your Score</h4>
+                <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                  <li>• Make more loan repayments (+100 points each)</li>
+                  <li>• Participate in staking (+50 points per day)</li>
+                  <li>• Vote in governance proposals (+30 points each)</li>
+                  <li>• Increase trading activity (+20 points per unit)</li>
+                  <li>• Avoid loan defaults (-200 points each)</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
